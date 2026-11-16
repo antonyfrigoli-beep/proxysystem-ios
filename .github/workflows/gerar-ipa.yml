@@ -22,19 +22,37 @@ jobs:
           
           xcrun --sdk iphoneos --show-sdk-version
           
-      - name: Descompactar fonte
-      
+          - name: Descompactar fonte
         run: |
-        
-          unzip -qo 3105-ptbr-compativel-fonte.zip
-          
-          SOURCE_ROOT=$(find . -type d \( -name '3105-public-build-20260918' -o -name '3105_codigo_publico' \) -print -quit)
-          
-          test -n "$SOURCE_ROOT"
-          
+          set -euo pipefail
+          echo "Commit: $GITHUB_SHA"
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Arquivos ZIP encontrados:"
+          find "$GITHUB_WORKSPACE" -maxdepth 3 -type f -iname '*.zip' -print
+
+          ZIP_PATH="$GITHUB_WORKSPACE/3105-ptbr-compativel-fonte.zip"
+          if [ ! -f "$ZIP_PATH" ]; then
+            echo "::error::Não encontrei 3105-ptbr-compativel-fonte.zip na raiz deste commit."
+            exit 1
+          fi
+
+          EXTRACT_DIR="$GITHUB_WORKSPACE/extracted-source"
+          mkdir -p "$EXTRACT_DIR"
+          unzip -qo "$ZIP_PATH" -d "$EXTRACT_DIR"
+
+          SOURCE_ROOT=$(find "$EXTRACT_DIR" -type d \( \
+            -name '3105-public-build-20260918' -o \
+            -name '3105_codigo_publico' \
+          \) -print -quit)
+
+          if [ -z "$SOURCE_ROOT" ]; then
+            echo "::error::O ZIP foi encontrado, mas não contém a pasta-fonte esperada."
+            exit 1
+          fi
+
           echo "SOURCE_ROOT=$SOURCE_ROOT" >> "$GITHUB_ENV"
-          
           ls -la "$SOURCE_ROOT"
+
           
       - name: Compilar sem assinatura
       
